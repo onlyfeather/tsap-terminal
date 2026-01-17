@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+
+@theme {
+  /* 映射 Tailwind 类名 */
+  --color-skin-base: var(--color-bg);
+  --color-skin-text: var(--color-text);
+  --color-skin-accent: var(--color-accent);
+  --color-skin-border: var(--color-border);
+}
+
+:root {
+  /* 唯一的真理：收容所配色 */
+  --color-bg: #0a0a0a;       /* 更深邃的黑 */
+  --color-text: #e5e5e5;     /* 灰白文字 */
+  --color-accent: #facc15;   /* 警告黄 (核心色) */
+  --color-border: #333333;   /* 深灰边框 */
+  
+  /* 字体锁定为等宽字体，更有终端感 */
+  --font-main: 'Courier New', Courier, monospace; 
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-main);
+  /* 移除过渡动画，终端不需要丝滑 */
+}
+
+/* 增加一个扫描线特效，增加逼格 */
+body::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none; /* 让鼠标能穿透这层特效 */
+}
+
+/* src/style.css 底部添加 */
+
+/* 防止 iOS 自动缩放输入框 */
+input {
+  font-size: 16px !important; 
+}
+
+/* 优化移动端高度，防止工具栏遮挡 */
+@supports (height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
