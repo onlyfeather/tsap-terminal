@@ -8,10 +8,11 @@ import { fetchAIReport } from './utils/aiService';
 import { generateReport, generateResonanceReport, generateVersusReport, generateAttackReport } from './utils/analyzer';
 import RadarChart from './components/RadarChart.vue';
 
-// 尝试导入 marked，如果没有安装则降级处理
+// 尝试导入 marked，如果没有安装则降级处理 (防崩溃)
 let marked = { parse: (t) => t };
 try { import('marked').then(m => marked = m); } catch (e) {}
 
+// --- 状态定义 ---
 const mode = ref('SINGLE');
 const inputName1 = ref('');
 const inputName2 = ref('');
@@ -27,10 +28,11 @@ const showAiModal = ref(false);
 const aiContent = ref('');
 const isAiLoading = ref(false);
 
+// 字段映射字典
 const defLabelMap = { waist: '腰部防御', feet: '足底反应', axilla: '腋下敏感', ears: '耳根神经', endurance: '忍耐阈值', volume: '最大声量' };
 const atkLabelMap = { tech: '指法技巧', control: '场面支配', obs: '弱点洞察', sadism: '施虐欲望', stamina: '体能续航', tools: '器械精通' };
 
-// 主题色获取器
+// --- 主题色逻辑 ---
 const getThemeClass = (type) => {
   const m = mode.value;
   if (type === 'text') {
@@ -60,12 +62,17 @@ const getThemeClass = (type) => {
   return '';
 };
 
+// --- 核心操作 ---
+
+// 1. 执行扫描分析
 const handleAnalyze = () => {
   if ((mode.value === 'SINGLE' || mode.value === 'ATTACK') && !inputName1.value) return;
   if ((mode.value === 'RESONANCE' || mode.value === 'VERSUS') && (!inputName1.value || !inputName2.value)) return;
 
   isScanning.value = true;
   report.value = null;
+  
+  // 模拟扫描延迟
   setTimeout(() => {
     if (mode.value === 'SINGLE') report.value = generateReport(inputName1.value);
     else if (mode.value === 'ATTACK') report.value = generateAttackReport(inputName1.value);
@@ -75,6 +82,7 @@ const handleAnalyze = () => {
   }, 1500);
 };
 
+// 2. 导出图片
 const handleExport = async () => {
   if (!cardRef.value) return;
   try {
@@ -85,7 +93,7 @@ const handleExport = async () => {
   } catch (err) { console.error(err); alert('导出失败'); }
 };
 
-// 触发 AI 分析
+// 3. 触发 AI 深度分析
 const handleAiAnalyze = () => {
   if (!report.value) return;
   
@@ -93,11 +101,27 @@ const handleAiAnalyze = () => {
   isAiLoading.value = true;
   aiContent.value = ""; 
 
+  // 提取静态推演文本作为 AI 上下文
+  let contextText = "";
+  if (report.value.diagnosis && report.value.diagnosis.analysis) {
+    contextText = report.value.diagnosis.analysis;
+  } else if (report.value.analysis) {
+    contextText = report.value.analysis;
+  }
+
   const reportData = {
+    // 名字组合 (显示用)
     name: Array.isArray(report.value.names) ? report.value.names.join(' & ') : report.value.name,
+    // 原始名字数组 (给 AI 拆分用，确保双人模式能拿到具体名字)
+    rawNames: report.value.names || [report.value.name],
+    // 六维数据
     stats: report.value.stats,
+    // 模式
     mode: mode.value,
-    rank: report.value.rank || report.value.syncRate + '%'
+    // 评级
+    rank: report.value.rank || report.value.syncRate + '%',
+    // 🌟 上下文：把静态分析器的结果发给 AI，确保逻辑一致
+    context: contextText
   };
 
   fetchAIReport(
@@ -108,6 +132,7 @@ const handleAiAnalyze = () => {
   );
 };
 
+// Markdown 渲染
 const renderedAiContent = computed(() => {
   return typeof marked.parse === 'function' ? marked.parse(aiContent.value) : aiContent.value;
 });
@@ -293,7 +318,7 @@ const renderedAiContent = computed(() => {
 .animate-laser-scan { 
   /* 匀速运动，确保动画连续性 */
   animation: laserScan 2s linear infinite;
-  /* 强制硬件加速 Hack */
+  /* 强制硬件加速 Hack: 这一行能解决99%的手机动画不流畅/不显示问题 */
   transform: translateZ(0);
 }
 
