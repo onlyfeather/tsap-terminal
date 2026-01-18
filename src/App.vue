@@ -57,7 +57,7 @@ const getThemeClass = (type) => {
     if (m === 'RESONANCE') return 'bg-gradient-to-r from-yellow-500 to-cyan-400 hover:opacity-90 text-black';
     return 'bg-rose-600 hover:bg-rose-500 text-white';
   }
-  return ''; // default fallback
+  return '';
 };
 
 const handleAnalyze = () => {
@@ -85,15 +85,14 @@ const handleExport = async () => {
   } catch (err) { console.error(err); alert('导出失败'); }
 };
 
-// 🌟 触发 AI 分析
+// 触发 AI 分析
 const handleAiAnalyze = () => {
   if (!report.value) return;
   
   showAiModal.value = true;
   isAiLoading.value = true;
-  aiContent.value = ""; // 重置内容
+  aiContent.value = ""; 
 
-  // 准备数据
   const reportData = {
     name: Array.isArray(report.value.names) ? report.value.names.join(' & ') : report.value.name,
     stats: report.value.stats,
@@ -103,13 +102,12 @@ const handleAiAnalyze = () => {
 
   fetchAIReport(
     reportData,
-    (text) => { aiContent.value = text; }, // 实时更新
-    () => { isAiLoading.value = false; },  // 完成
-    (err) => { aiContent.value = "Connect Error: " + err.message; isAiLoading.value = false; } // 错误
+    (text) => { aiContent.value = text; }, 
+    () => { isAiLoading.value = false; }, 
+    (err) => { aiContent.value = "Connect Error: " + err.message; isAiLoading.value = false; } 
   );
 };
 
-// 简单的 Markdown 渲染 (如果没有 marked 库则直接显示文本)
 const renderedAiContent = computed(() => {
   return typeof marked.parse === 'function' ? marked.parse(aiContent.value) : aiContent.value;
 });
@@ -157,9 +155,20 @@ const renderedAiContent = computed(() => {
         </button>
       </div>
 
-      <div v-if="isScanning" class="relative w-full h-96 border bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center animate-pulse border-opacity-30" :class="getThemeClass('border')">
-        <div class="absolute left-0 w-full h-1 shadow-[0_0_20px_rgba(255,255,255,0.5)] animate-scan z-20" :class="getThemeClass('bg-blob').replace('bg-blob', 'bg')"></div>
-        <div class="text-sm tracking-[0.2em] space-y-4 text-center text-gray-400"><div>读取生物样本...</div><div class="text-3xl font-black opacity-50">PROCESSING</div></div>
+      <div v-if="isScanning" 
+           class="relative w-full h-80 sm:h-96 border bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center border-opacity-30 overflow-hidden rounded-sm"
+           :class="getThemeClass('border')">
+        
+        <div class="absolute left-0 top-0 w-full h-[2px] z-20 shadow-[0_0_15px_currentColor] opacity-80 transform-gpu" 
+             :class="[getThemeClass('bg-blob').replace('bg-blob', 'bg'), 'animate-laser-scan']">
+        </div>
+        
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+
+        <div class="text-sm tracking-[0.2em] space-y-4 text-center text-gray-400 z-10">
+          <div class="animate-pulse">读取生物样本...</div>
+          <div class="text-3xl font-black opacity-50">PROCESSING</div>
+        </div>
       </div>
 
       <div v-else-if="report" class="flex flex-col items-center w-full animate-fade-in-up">
@@ -218,7 +227,6 @@ const renderedAiContent = computed(() => {
             <button @click="handleExport" class="flex-[2] py-3 bg-opacity-10 border text-sm font-bold transition-all flex items-center justify-center gap-2 hover:bg-opacity-100 hover:text-black" 
               :class="getThemeClass('border') + ' ' + getThemeClass('text')">保存档案</button>
           </div>
-          
           <button @click="handleAiAnalyze" class="w-full py-4 border border-dashed flex items-center justify-center gap-3 group overflow-hidden relative transition-all duration-300"
              :class="getThemeClass('border') + ' ' + getThemeClass('text') + ' hover:bg-opacity-10 bg-opacity-0'">
              <div class="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity" :class="getThemeClass('bg-blob').replace('bg-', 'bg-')"></div>
@@ -265,3 +273,35 @@ const renderedAiContent = computed(() => {
 
   </div>
 </template>
+
+<style scoped>
+/* 🌟 修复后的激光扫描动画 (移动端友好) */
+@keyframes laserScan { 
+  0% { 
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% { 
+    top: 100%;
+    opacity: 0.8;
+  } 
+}
+
+.animate-laser-scan { 
+  /* 匀速运动，确保动画连续性 */
+  animation: laserScan 2s linear infinite;
+  /* 强制硬件加速 Hack */
+  transform: translateZ(0);
+}
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes blob { 0% { transform: translate(0px, 0px) scale(1); } 33% { transform: translate(30px, -50px) scale(1.1); } 66% { transform: translate(-20px, 20px) scale(0.9); } 100% { transform: translate(0px, 0px) scale(1); } }
+.animate-blob { animation: blob 10s infinite; }
+.animation-delay-2000 { animation-delay: 2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+</style>
