@@ -12,47 +12,54 @@ const props = defineProps({
 });
 
 const chartData = computed(() => {
-  const labels = ['腰部', '足底', '腋下', '耳根', '忍耐', '声量'];
-  
+  const defLabels = ['腰部', '足底', '腋下', '耳根', '忍耐', '声量'];
+  const atkLabels = ['指法技巧', '场面支配', '弱点洞察', '施虐欲望', '体能续航', '器械精通'];
+  const versusLabels = ['支配/腰部', '道具/足底', '技巧/腋下', '洞察/耳根', '施虐/忍耐', '续航/声量'];
+
+  let labels = defLabels;
+  if (props.mode === 'ATTACK') labels = atkLabels;
+  if (props.mode === 'VERSUS') labels = versusLabels;
+
   if (Array.isArray(props.stats)) {
     // === 双人模式 ===
-    let color1, color2;
-    
+    let color1, color2, data1, data2;
     if (props.mode === 'VERSUS') {
-      // 🔴 攻防模式：红色 vs 灰色
-      color1 = { bg: 'rgba(244, 63, 94, 0.2)', border: '#f43f5e' }; // Rose-500
-      color2 = { bg: 'rgba(156, 163, 175, 0.2)', border: '#9ca3af' }; // Gray-400
+      const s = props.stats[0];
+      data1 = [s.control, s.tools, s.tech, s.obs, s.sadism, s.stamina];
+      data2 = Object.values(props.stats[1]);
+      color1 = { bg: 'rgba(244, 63, 94, 0.2)', border: '#f43f5e' }; 
+      color2 = { bg: 'rgba(156, 163, 175, 0.2)', border: '#9ca3af' };
     } else {
-      // 🔵 共鸣模式：黄色 vs 青色
-      color1 = { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308' }; // Yellow-500
-      color2 = { bg: 'rgba(34, 211, 238, 0.2)', border: '#22d3ee' }; // Cyan-400
+      data1 = Object.values(props.stats[0]);
+      data2 = Object.values(props.stats[1]);
+      color1 = { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308' }; 
+      color2 = { bg: 'rgba(34, 211, 238, 0.2)', border: '#22d3ee' }; 
     }
-
     return {
       labels,
       datasets: [
         {
-          label: props.names[0] || 'Alpha',
+          label: props.mode === 'VERSUS' ? `[S] ${props.names[0]}` : props.names[0],
           backgroundColor: color1.bg, borderColor: color1.border,
-          pointBackgroundColor: color1.border, pointBorderColor: '#fff',
-          data: Object.values(props.stats[0])
+          pointBackgroundColor: color1.border, pointBorderColor: '#fff', data: data1
         },
         {
-          label: props.names[1] || 'Beta',
+          label: props.mode === 'VERSUS' ? `[M] ${props.names[1]}` : props.names[1],
           backgroundColor: color2.bg, borderColor: color2.border,
-          pointBackgroundColor: color2.border, pointBorderColor: '#fff',
-          data: Object.values(props.stats[1])
+          pointBackgroundColor: color2.border, pointBorderColor: '#fff', data: data2
         }
       ]
     };
   } else {
-    // === 单人模式：黄色 ===
+    // === 单人模式 ===
+    const isAtk = props.mode === 'ATTACK';
+    const color = isAtk ? { bg: 'rgba(168, 85, 247, 0.2)', border: '#a855f7' } : { bg: 'rgba(234, 179, 8, 0.2)', border: '#eab308' };
     return {
       labels,
       datasets: [{
-        label: '敏感指标',
-        backgroundColor: 'rgba(234, 179, 8, 0.2)', borderColor: '#eab308',
-        pointBackgroundColor: '#eab308', pointBorderColor: '#fff',
+        label: isAtk ? '支配指标' : '敏感指标',
+        backgroundColor: color.bg, borderColor: color.border,
+        pointBackgroundColor: color.border, pointBorderColor: '#fff', 
         data: Object.values(props.stats)
       }]
     };
@@ -65,20 +72,28 @@ const chartOptions = {
     r: {
       angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
       grid: { color: 'rgba(255, 255, 255, 0.1)' },
-      pointLabels: { color: 'rgba(255, 255, 255, 0.7)', font: { size: 10, family: 'monospace' } },
+      pointLabels: { 
+        color: 'rgba(255, 255, 255, 0.9)', // 调亮颜色
+        // 🌟 字体放大：从 9 改为 12
+        font: { size: 12, family: 'monospace', weight: 'bold' } 
+      },
       ticks: { display: false, maxTicksLimit: 5 },
       suggestedMin: 0, suggestedMax: 100
     }
   },
   plugins: {
     legend: {
-      display: props.mode !== 'SINGLE',
-      labels: { color: '#ffffff', font: { family: 'monospace' } }
+      display: props.mode !== 'SINGLE' && props.mode !== 'ATTACK',
+      labels: { 
+        color: '#ffffff', 
+        // 🌟 图例字体放大
+        font: { size: 12, family: 'monospace' } 
+      }
     }
   }
 };
 </script>
 
 <template>
-  <div class="w-full h-[250px]"><Radar :data="chartData" :options="chartOptions" /></div>
+  <div class="w-full h-[280px]"><Radar :data="chartData" :options="chartOptions" /></div>
 </template>
