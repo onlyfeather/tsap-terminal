@@ -1,45 +1,36 @@
 // src/utils/aiService.js
 
-// 🌟 修改点 1: 地址改为指向你自己的后端 Vercel 函数
-// 这样前端就不会暴露任何 Key，也不会直接连接 DeepSeek
 const API_URL = "/api/chat"; 
 
-/**
- * 调用 AI 生成深度分析报告 (流式输出)
- * @param {Object} reportData - 包含 name, stats, mode, rank
- * @param {Function} onStream - 回调函数，每收到一个字调用一次
- * @param {Function} onComplete - 完成时调用
- * @param {Function} onError - 出错时调用
- */
 export async function fetchAIReport(reportData, onStream, onComplete, onError) {
   try {
-    // 1. 构建提示词 (Prompt Engineering)
     const prompt = buildSystemPrompt(reportData);
 
-    // 2. 向你的后端 (/api/chat) 发起请求
-    // 🌟 修改点 2: 不再在前端发送 Authorization 头，Key 由后端处理
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { 
-        "Content-Type": "application/json" 
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        // 我们只发送消息列表，模型配置(model, temperature)和 Key 都放在后端控制
         messages: [
           { 
             role: "system", 
-            content: "你是一个赛博朋克风格的生物神经分析终端系统(TSAP)。请根据提供的六维数据，生成一份冷酷、专业、带有隐喻色彩的临床诊断报告。涉及BDSM属性分析时，请使用'神经回路'、'多巴胺阈值'、'心理防御机制'等医学或心理学隐喻，避免过于直白的色情描述。风格参考：攻壳机动队、SCP基金会。字数控制在150字以内。不要使用Markdown标题，直接分段输出。" 
+            // 🌟 核心修改：文风约束 -> 极致的研究所/临床报告风格
+            content: `身份：TSAP实验室自动病理分析终端。
+任务：基于生物数据生成一份【临床神经病理报告】。
+风格要求：
+1. 极度冷静、客观、学术化。禁止使用任何文学修辞、比喻、感叹号或煽情描写。
+2. 使用“受试者”指代目标。
+3. 将交互属性解构为生理指标（如：将“敏感”描述为“末梢神经阈值过低”，将“S倾向”描述为“控制型人格障碍”或“多巴胺回路异常”）。
+4. 格式参考：SCP基金会档案、神经内科诊断书。
+5. 字数限制：150字以内。
+6. 直接输出分析正文，不要任何开场白。`
           },
           { role: "user", content: prompt }
         ]
       })
     });
 
-    if (!response.ok) {
-      throw new Error(`Server Error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Server Error: ${response.status}`);
 
-    // 3. 处理流式数据 (逻辑保持不变，因为后端是透传流的)
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let fullText = "";
@@ -47,12 +38,8 @@ export async function fetchAIReport(reportData, onStream, onComplete, onError) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
       const chunk = decoder.decode(value, { stream: true });
-      
-      // 解析 DeepSeek/OpenAI 格式的数据流
       const lines = chunk.split("\n").filter(line => line.trim() !== "");
-      
       for (const line of lines) {
         if (line.includes("[DONE]")) break;
         if (line.startsWith("data: ")) {
@@ -61,42 +48,38 @@ export async function fetchAIReport(reportData, onStream, onComplete, onError) {
             const content = json.choices[0].delta.content || "";
             if (content) {
               fullText += content;
-              onStream(fullText); // 实时更新 UI
+              onStream(fullText);
             }
-          } catch (e) {
-            console.warn("Stream parse error", e);
-          }
+          } catch (e) { console.warn(e); }
         }
       }
     }
-    
     if (onComplete) onComplete();
 
   } catch (error) {
-    console.error("AI Request Failed:", error);
+    console.error("AI Error:", error);
     if (onError) onError(error);
-    else onStream("⚠️ 连接至神经云端失败。\n请检查后端服务配置。\nERR: " + error.message);
   }
 }
 
-// 辅助：构建 Prompt (保持不变)
+// 🌟 辅助：构建更学术的数据输入
 function buildSystemPrompt(data) {
   const statsStr = JSON.stringify(data.stats);
   
-  let modeContext = "";
-  if (data.mode === 'SINGLE') modeContext = "模式：[受体分析]。分析其敏感弱点和心理防线脆弱度。";
-  else if (data.mode === 'ATTACK') modeContext = "模式：[执行官分析]。分析其支配风格、施虐倾向及手段特征。";
-  else if (data.mode === 'RESONANCE') modeContext = "模式：[神经共鸣]。分析两个个体之间的感官同步率和化学反应。";
-  else if (data.mode === 'VERSUS') modeContext = "模式：[攻防博弈]。分析两者的强弱对抗关系，预测谁会先崩溃。";
+  // 将模式翻译为更像“实验项目”的代号
+  let modeTerm = "未知项目";
+  if (data.mode === 'SINGLE') modeTerm = "单体神经耐受度测试 (Project-M)";
+  else if (data.mode === 'ATTACK') modeTerm = "执行官心理评估 (Project-S)";
+  else if (data.mode === 'RESONANCE') modeTerm = "双体神经同步实验";
+  else if (data.mode === 'VERSUS') modeTerm = "对抗性压力测试";
 
   return `
-    [[ 接入请求 ]]
-    目标代号：${data.name}
-    测定评级：${data.rank || '未知'}
-    ${modeContext}
-    六维神经读数：${statsStr}
-    
-    [[ 指令 ]]
-    请输出一段简短而深刻的诊断结论。
-  `;
+【实验记录单】
+实验对象代号：${data.name}
+实验项目：${modeTerm}
+综合评级：${data.rank || 'N/A'}
+生物监测数据(六维)：${statsStr}
+
+请基于上述数据，分析该对象的神经系统特征及心理防御机制。
+`;
 }
